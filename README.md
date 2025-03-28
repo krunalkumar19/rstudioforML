@@ -26,6 +26,7 @@ The code demonstrates how to load, clean, transform, and analyze data to build m
 - The models can be used as a basis for automating insurance claim predictions, enabling better decision-making and operational efficiency.
 
 ## How to Run the Code
+- Install Rstudio
 - Install the necessary R packages (e.g., dplyr, randomForest, caret).
 - Find the dataset in the repository and use it.
 - **There are 2 CSV files, one is raw data and the second one is scrubbed for the script's use.**
