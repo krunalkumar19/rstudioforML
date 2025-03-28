@@ -6,7 +6,7 @@ library(ROCR)         # For performance evaluation (ROC curves, AUC)
 # STEP 1: Read in Data
 
 # Define file path (modify as needed for your system)
-PATH = "rstudioforML/HMEQ_Scrubbed_1.csv"
+PATH = "rstudioforML/HMEQ_Scrubbed_1.csv" #Edit this location with the file location
 FILE_NAME = "HMEQ_Scrubbed_1.csv"  # Data file
 
 # Create a full path to the file
