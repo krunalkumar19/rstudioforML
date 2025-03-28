@@ -1,365 +1,405 @@
-library(rpart)
-library(rpart.plot)
-library(ROCR)
-library(randomForest)
-library(gbm)
-library(MASS)
-library(Rtsne)
+# Load necessary libraries
+library(rpart)        # For classification decision trees
+library(rpart.plot)   # For visualizing decision trees
+library(ROCR)         # For performance evaluation (ROC curves, AUC)
+
+# STEP 1: Read in Data
+
+# Define file path (modify as needed for your system)
+PATH = "Downloaded the HMEQ_Scrubbed_1.CSV file"
+FILE_NAME = "HMEQ_Scrubbed_1.csv"  # Data file
+
+# Create full path to the file
+INFILE = paste(PATH, FILE_NAME, sep="/")
+
+# Set working directory to the file location
+setwd(PATH)
+
+# Read the CSV file into a dataframe
+# Ensure the file is present at the specified location
+
+df = read.csv((FILE_NAME))
+
+# Inspect the dataset
+head(df)       # Display first few rows
+str(df)        # Show structure (column names, types, missing values)
+summary(df)    # Provide summary statistics
+
+# STEP 2: Classification Decision Tree
+
+# Set a seed for reproducibility
 SEED = 1
 set.seed(SEED)
 
-PATH = "C:/Users/kapad/OneDrive/Desktop/Trine/DS"
-FILE_NAME = "HMEQ_Scrubbed.csv"
-
-INFILE = paste(PATH, FILE_NAME, sep = "/")
-
-setwd(PATH)
-df=read.csv(FILE_NAME)
-
-str(df)
-summary(df)
-head(df, 6)
-
-#STEP 2: PCA Analysis
-df_pca = df
-df_pca$TARGET_BAD_FLAG = NULL
-df_pca$TARGET_LOSS_AMT = NULL
-df_pca$M_MORTDUE = NULL
-df_pca$M_VALUE = NULL
-df_pca$M_YOJ = NULL
-df_pca$IMP_DEROG = NULL
-df_pca$M_DEROG = NULL
-df_pca$IMP_DELINQ = NULL
-df_pca$M_CLAGE = NULL
-df_pca$IMP_NINQ = NULL
-df_pca$M_NINQ = NULL
-df_pca$M_CLNO = NULL
-df_pca$M_DEBTINC = NULL
-df_pca$FLAG.Job.Mgr = NULL
-df_pca$FLAG.Job.Office = NULL
-df_pca$FLAG.Job.Other = NULL
-df_pca$FLAG.Job.ProfExe = NULL
-df_pca$FLAG.Job.Sales = NULL
-df_pca$FLAG.Job.Self = NULL
-df_pca$FLAG.Reason.DebtCon = NULL
-df_pca$FLAG.Reason.HomeImp = NULL
-df_pca$M_DELINQ = NULL
-head(df_pca)
-
-pca = prcomp(df_pca, center = TRUE, scale =TRUE)
-summary(pca)
-plot(pca, type = "lines")
-df_new = predict(pca, df_pca)
-head(df_new)
-
-pca
-
-df_no_flags = df
-df_no_flags$PC1 = df_new[,"PC1"]
-df_no_flags$PC2 = df_new[,"PC2"]
-df_no_flags$PC3 = df_new[,"PC3"]
-head(df_no_flags)
-
-colors <- c("#00AFBB","#E7B800")
-colors <- c("red","black")
-colors <- colors[df_no_flags$TARGET_BAD_FLAG + 1]
-plot(df_no_flags$PC1, df_no_flags$PC2, col=colors, pch = 16)
-legend("bottomright", c("defaults","non-defaults"), col=c("black","red"), bty="y", lty=1)
-
-
-#Random dataframe
-df_no_flags$RAND1 = sample(100, size = nrow(df_no_flags), replace = TRUE)
-df_no_flags$RAND2 = sample(100, size = nrow(df_no_flags), replace = TRUE)
-
-head(df_no_flags)
-
-df_no_flags0 = df_no_flags[which(df_no_flags$TARGET_BAD_FLAG == 0), ]
-df_no_flags1 = df_no_flags[which(df_no_flags$TARGET_BAD_FLAG == 1), ]
-dim(df_no_flags0)
-dim(df_no_flags1)
-
-df_no_flags0 = df_no_flags0[df_no_flags0$RAND1 < 25, ]
-df_no_flags1 = df_no_flags1[df_no_flags0$RAND1 < 75, ]
-dim(df_no_flags0)
-dim(df_no_flags1)
-
-df_no_flagsx = rbind(df_no_flags0, df_no_flags1)
-dim(df_no_flagsx)
-df_no_flagsx = df_no_flagsx[df_no_flagsx$RAND2 < 15, ]
-dim(df_no_flagsx)
-
-#df_no_flagsx = df_no_flags
-
-colors <- c("#00AFBB","#E7B800")
-colors <- c("red","black")
-colors <- colors[df_no_flagsx$TARGET_BAD_FLAG + 1]
-plot(df_no_flagsx$PC1, df_no_flagsx$PC2, col=colors, pch = 16)
-legend("bottomright", c("defaults","non-defaults"), col=c("black","red"), bty="y", lty=1)
-
-
-
-#STEP 3: tSNE Analysis
-
-dfu = df
-dfu$TARGET_LOSS_AMT = NULL
-dfu = unique(dfu)
-head(dfu)
-
-theTSNE = Rtsne(dfu[,c(2,3,5,7,13,17,19)], dims = 2, perplexity = 30, versobe = TRUE, max_iter = 500)
-
-dfu$TS1 = theTSNE$Y[,1]
-dfu$TS2 = theTSNE$Y[,2]
-
-colors <- c("#00AFBB","#E7B800")
-colors <- c("red","black")
-colors <- colors[dfu$TARGET_BAD_FLAG + 1]
-plot(dfu$TS1, dfu$TS2, col=colors, pch = 16)
-legend("bottomleft", c("defaults","non-defaults"), col=c("black","red"), bty="y", lty=1)
-
-
-#Random number Dataframe
-
-dfu$RAND1 = sample(100, size = nrow(dfu), replace = TRUE)
-dfu$RAND2 = sample(100, size = nrow(dfu), replace = TRUE)
-
-
-dfu0 = dfu[which(dfu$TARGET_BAD_FLAG == 0), ]
-dfu1 = dfu[which(dfu$TARGET_BAD_FLAG == 1), ]
-
-dfu0 = dfu0[dfu$RAND1 < 25, ]
-dfu1 = dfu1[dfu$RAND1 < 75, ]
-
-
-dfux = rbind(dfu0, dfu1)
-dfux = dfux[dfux$RAND2 < 15, ]
-
-head(dfu)
-
-colors <- c("#00AFBB","#E7B800")
-colors <- c("red","black")
-colors <- colors[dfux$TARGET_BAD_FLAG + 1]
-plot(dfux$TS1, dfux$TS2, col=colors, pch = 16)
-legend("bottomleft", c("defaults","non-defaults"), col=c("black","red"), bty="y", lty=1)
-
-
-#Model with perplexity = 45
-
-theTSNE = Rtsne(dfu[,c(2,3,5,7,13,17,19)], dims = 2, perplexity = 100, versobe = TRUE, max_iter = 500)
-
-dfu$TS1 = theTSNE$Y[,1]
-dfu$TS2 = theTSNE$Y[,2]
-
-colors <- c("#00AFBB","#E7B800")
-colors <- c("red","black")
-colors <- colors[dfu$TARGET_BAD_FLAG + 1]
-plot(dfu$TS1, dfu$TS2, col=colors, pch = 16)
-legend("bottomright", c("defaults","non-defaults"), col=c("black","red"), bty="y", lty=1)
-
-##Model with perplexity = 10
-theTSNE = Rtsne(dfu[,c(2,3,5,7,13,17,19)], dims = 2, perplexity = 10, versobe = TRUE, max_iter = 500)
-
-dfu$TS1 = theTSNE$Y[,1]
-dfu$TS2 = theTSNE$Y[,2]
-
-colors <- c("#00AFBB","#E7B800")
-colors <- c("red","black")
-colors <- colors[dfu$TARGET_BAD_FLAG + 1]
-plot(dfu$TS1, dfu$TS2, col=colors, pch = 16)
-legend("bottomright", c("defaults","non-defaults"), col=c("black","red"), bty="y", lty=1)
-head(dfu)
-
-
-#RandomForest Model
-p = paste(colnames(dfu)[c(2,3,5,7,13,17,19)], collapse = "+")
-F1 = as.formula(paste0("TS1 ~", p))
-F2 = as.formula(paste0("TS2 ~", p))
-
-print(F1)
-print(F2)
-
-ts1_model_rf = randomForest(data=dfu, F1, ntree=500, importance = TRUE)
-ts2_model_rf = randomForest(data=dfu, F2, ntree=500, importance = TRUE)
-
-df_tsne = df
-
-df_tsne$TS1M_RF = predict(ts1_model_rf, df_tsne)
-df_tsne$TS2M_RF = predict(ts2_model_rf, df_tsne)
-
-head(df_tsne)
-
-colors <- c("#00AFBB","#E7B800")
-colors <- c("red","black")
-colors <- colors[df_tsne$TARGET_BAD_FLAG + 1]
-plot(df_tsne$TS1M_RF, df_tsne$TS2M_RF, col=colors, pch = 16)
-legend("bottomright", c("defaults","non-defaults"), col=c("black","red"), bty="y", lty=1)
-
-
-df_tsne$RAND1 = sample(100, size = nrow(df_tsne), replace = TRUE)
-df_tsne$RAND2 = sample(100, size = nrow(df_tsne), replace = TRUE)
-
-
-df_tsne0 = df_tsne[which(df_tsne$TARGET_BAD_FLAG == 0), ]
-df_tsne1 = df_tsne[which(df_tsne$TARGET_BAD_FLAG == 1), ]
-
-df_tsne0 = df_tsne0[df_tsne$RAND1 < 25, ]
-df_tsne1 = df_tsne1[df_tsne$RAND1 < 75, ]
-
-
-df_tsnex = rbind(df_tsne0, df_tsne1)
-df_tsnex = df_tsnex[df_tsnex$RAND2 < 15, ]
-
-head(df_tsne)
-
-colors <- c("#00AFBB","#E7B800")
-colors <- c("red","black")
-colors <- colors[df_tsnex$TARGET_BAD_FLAG + 1]
-plot(df_tsnex$TS1M_RF, df_tsnex$TS2M_RF, col=colors, pch = 16)
-legend("bottomright", c("defaults","non-defaults"), col=c("black","red"), bty="y", lty=1)
-
-
-
-#STEP 4: Tree and Regression Analysis on the Original Data
-
+# Create a copy of the dataset and remove the target loss amount column (not needed for classification)
 df_flag = df
-df_flag$TARGET_LOSS_AMT = NULL
+df_flag$TARGET_LOSS_AMT = NULL  
 
-FLAG = sample(c(TRUE ,FALSE), nrow(df_flag), replace = TRUE, prob = c(0.7,0.3))
-df_train = df_flag[FLAG, ]
-df_test = df_flag[! FLAG, ]
+# Split data into training (70%) and testing (30%) sets
+FLAG = sample(c(T,F), nrow(df_flag), replace = T, prob = c(0.7,0.3))
+df_train = df[FLAG, ]  # Training dataset
+df_test = df[!FLAG, ]  # Testing dataset
 
-dim(df_flag)
+dim(df_flag)  # Check dimensions of full dataset
+dim(df_train) # Check dimensions of training dataset
+dim(df_test)  # Check dimensions of testing dataset
+
+# Set tree control parameters (max depth of 6)
+tr_set = rpart.control(maxdepth = 6)
+
+# Train a classification decision tree using the Gini impurity criterion
+t1G = rpart(data = df_train,
+            TARGET_BAD_FLAG ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp,
+            control = tr_set,
+            method = "class",
+            parms = list(split= 'gini'))
+
+# Train a classification decision tree using the Information Gain (Entropy) criterion
+t1E = rpart(data = df_train,
+            TARGET_BAD_FLAG ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp,
+            control = tr_set,
+            method = "class",
+            parms = list(split= 'information'))
+
+# Visualize both decision trees,
+rpart.plot(t1G)  # Gini tree
+rpart.plot(t1E)  # Entropy tree
+
+# Print variable importance
+print(t1G$variable.importance)
+print(t1E$variable.importance)
+
+# Predictions on training data
+pG = predict(t1G, df_train)
+pG2 = prediction(pG[,2], df_train$TARGET_BAD_FLAG)
+pG3 = performance(pG2,"tpr","fpr")
+
+pE = predict(t1E, df_train)
+pE2 = prediction(pE[,2], df_train$TARGET_BAD_FLAG)
+pE3 = performance(pE2,"tpr","fpr")
+
+# Plot ROC curves for training data
+plot(pG3, col="red")
+plot(pE3, col="green", add=T)
+abline(0,1,lty=2) # Diagonal reference line
+legend("bottomright",c("TRAIN GINI","TRAIN ENTROPY"),
+       col=c("red","green"),
+       bty = "y", lty = 1)
+
+# Compute AUC (Area Under Curve) for training data
+aucG = performance(pG2, "auc")@y.values
+aucE = performance(pE2, "auc")@y.values
+print(paste("TRAIN AUC GINI", aucG))
+print(paste("TRAIN AUC ENTROPY", aucE))
+
+# Confusion matrices for training data
+fG = predict(t1G, df_train, type = "class")
+fE = predict(t1E, df_train, type = "class")
+
+table(fG,df_train$TARGET_BAD_FLAG)
+table(fE,df_train$TARGET_BAD_FLAG)
+
+# Predictions on test data
+pG = predict(t1G, df_test)
+pG2 = prediction(pG[,2], df_test$TARGET_BAD_FLAG)
+pG3 = performance(pG2,"tpr","fpr")
+
+pE = predict(t1E, df_test)
+pE2 = prediction(pE[,2], df_test$TARGET_BAD_FLAG)
+pE3 = performance(pE2,"tpr","fpr")
+
+# Plot ROC curves for test data
+plot(pG3, col="red")
+plot(pE3, col="green", add=T)
+abline(0,1,lty=2)
+legend("bottomright",c("TEST GINI","TEST ENTROPY"),
+       col=c("red","green"),
+       bty = "y", lty = 1)
+
+# Compute AUC (Area Under Curve) for test data
+aucG = performance(pG2, "auc")@y.values
+aucE = performance(pE2, "auc")@y.values
+print(paste("TEST AUC GINI", aucG))
+print(paste("TEST AUC ENTROPY", aucE))
+
+# Confusion matrices for test data
+fG = predict(t1G, df_test, type = "class")
+fE = predict(t1E, df_test, type = "class")
+
+table(fG,df_test$TARGET_BAD_FLAG)
+table(fE,df_test$TARGET_BAD_FLAG)
+
+# Train a decision tree using Gini impurity
+
+t1G = rpart(data = df_flag,
+            TARGET_BAD_FLAG ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+
+              FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+
+              FLAG.REASON.DebtCon+FLAG.REASON.HomeImp,
+            control = tr_set,
+            method = "class",
+            parms = list(split= 'gini'))
+
+# Train a decision tree using Information Gain (Entropy)
+
+t1E = rpart(data = df_flag,
+            TARGET_BAD_FLAG ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+
+              FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+
+              FLAG.REASON.DebtCon+FLAG.REASON.HomeImp,
+            control = tr_set,
+            method = "class",
+            parms = list(split= 'information'))
+
+# Visualize the trained decision trees
+rpart.plot(t1G)  # Plot Gini-based tree
+t1G$variable.importance  # Show feature importance for Gini-based tree
+
+rpart.plot(t1E)  # Plot Entropy-based tree
+t1E$variable.importance  # Show feature importance for Entropy-based tree
+
+# Make predictions using Gini-based model
+pG = predict(t1G, df_flag)
+pG2 = prediction(pG[,2], df_flag$TARGET_BAD_FLAG)
+pG3 = performance(pG2, "tpr", "fpr")
+
+# Make predictions using an Entropy-based model
+pE = predict(t1E, df_flag)
+pE2 = prediction(pE[,2], df_flag$TARGET_BAD_FLAG)
+pE3 = performance(pE2, "tpr", "fpr")
+
+# Plot ROC curves to compare models
+plot(pG3, col="red")  # Plot Gini ROC curve
+plot(pE3, col="green", add=T)  # Add Entropy ROC curve to same plot
+abline(0,1,lty=2)  # Diagonal reference line
+legend("bottomright",c("TRAIN GINI","TRAIN ENTROPY"),
+       col=c("red","green"),
+       bty = "y", lty = 1)
+
+# Compute AUC values for both models
+aucG = performance(pG2, "auc")@y.values
+aucE = performance(pE2, "auc")@y.values
+
+# Print AUC results
+print(paste("ALL DATA AUC GINI", aucG))
+print(paste("ALL DATA AUC ENTROPY", aucE))
+
+# Make final class predictions using both models
+fG = predict(t1G, df_flag, type = "class")
+fE = predict(t1E, df_flag, type = "class")
+
+# Generate confusion matrices to evaluate model performance
+table(fG,df_flag$TARGET_BAD_FLAG)
+table(fE,df_flag$TARGET_BAD_FLAG)
+
+# Load necessary libraries
+library(rpart)
+library(rpart.plot)
+
+# Step 1: Data Preparation
+# Create a copy of the original dataset, excluding the TARGET_BAD_FLAG column
+df_amt = df
+df_amt$TARGET_BAD_FLAG = NULL
+
+# Split data into training (70%) and testing (30%) sets
+FLAG = sample(c(T,F), nrow(df_amt), replace = T, prob = c(0.7,0.3))
+df_train = df_amt[FLAG, ]
+df_test = df_amt[! FLAG, ]
+
+# Display the first 10 values of the FLAG vector
+head(FLAG, 10)
+
+# Compute and print the mean of TARGET_LOSS_AMT for full, train, and test datasets
+mean(df_amt$TARGET_LOSS_AMT)
+mean(df_train$TARGET_LOSS_AMT)
+mean(df_test$TARGET_LOSS_AMT)
+
+# Print the dimensions of the datasets
+dim(df_amt)
 dim(df_train)
 dim(df_test)
 
-#DECISION TREE
+# Step 2: Train Regression Decision Tree Models
+# Set control parameters for decision trees
+tr_set = rpart.control(maxdepth = 6)
+
+# Train a regression tree using the ANOVA method
+t1a = rpart(data = df_train,
+            TARGET_LOSS_AMT ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+
+              FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+
+              FLAG.REASON.DebtCon+FLAG.REASON.HomeImp,
+            control = tr_set,
+            method = "anova")
+
+# Train a regression tree using the Poisson method
+t1p = rpart(data = df_train,
+            TARGET_LOSS_AMT ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+
+              FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+
+              FLAG.REASON.DebtCon+FLAG.REASON.HomeImp,
+            control = tr_set,
+            method = "poisson")
+
+# Visualize the decision trees
+rpart.plot(t1a)
+rpart.plot(t1p)
+
+# Print variable importance from each model
+t1a$variable.importance
+t1p$variable.importance
+
+# Step 3: Compute RMSE for Train Dataset
+# Predict on training data using the ANOVA model
+p1a = predict(t1a, df_train)
+RMSE1a = sqrt(mean((df_train$TARGET_LOSS_AMT - p1a)^2))
+
+# Predict on training data using the Poisson model
+p1p = predict(t1p, df_train)
+RMSE1p = sqrt(mean((df_train$TARGET_LOSS_AMT - p1p)^2))
+
+# Print RMSE values for the train dataset
+print(paste("TRAIN RMSE ANOVA =", RMSE1a))
+print(paste("TRAIN RMSE poisson =", RMSE1p))
+
+# Step 4: Evaluate Models on Test Dataset
+# Train the models again using the test dataset
+tr_set = rpart.control(maxdepth = 6)
+
+t1a = rpart(data = df_test, TARGET_LOSS_AMT ~ ., control = tr_set, method = "anova")
+t1p = rpart(data = df_test, TARGET_LOSS_AMT ~ ., control = tr_set, method = "poisson")
+
+# Visualize the decision trees for the test dataset
+rpart.plot(t1a)
+rpart.plot(t1p)
+
+# Compute RMSE for test dataset
+p1a = predict(t1a, df_test)
+RMSE1a = sqrt(mean((df_test$TARGET_LOSS_AMT - p1a)^2))
+
+p1p = predict(t1p, df_test)
+RMSE1p = sqrt(mean((df_test$TARGET_LOSS_AMT - p1p)^2))
+
+# Print RMSE values for the test dataset
+print(paste("TEST RMSE ANOVA =", RMSE1a))
+print(paste("TEST RMSE poisson =", RMSE1p))
+
+# Step 5: Train and Evaluate Models on Full Dataset
+tr_set = rpart.control(maxdepth = 6)
+
+t1a = rpart(data = df_amt, TARGET_LOSS_AMT ~ ., control = tr_set, method = "anova")
+t1p = rpart(data = df_amt, TARGET_LOSS_AMT ~ ., control = tr_set, method = "poisson")
+
+# Visualize the decision trees for the full dataset
+rpart.plot(t1a)
+rpart.plot(t1p)
+
+# Compute RMSE for full dataset
+p1a = predict(t1a, df_amt)
+RMSE1a = sqrt(mean((df_amt$TARGET_LOSS_AMT - p1a)^2))
+
+p1p = predict(t1p, df_amt)
+RMSE1p = sqrt(mean((df_amt$TARGET_LOSS_AMT - p1p)^2))
+
+# Print RMSE values for full dataset
+print(paste("AD RMSE ANOVA =", RMSE1a))
+print(paste("AD RMSE poisson =", RMSE1p))
+
+# STEP 4: Probability/Severity Model Decision Tree
+
+# Building a decision tree model to predict the probability of default (TARGET_BAD_FLAG)
+t2_f = rpart(data=df_flag, TARGET_BAD_FLAG ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp, control = tr_set)
+rpart.plot(t2_f)  # Visualizing the decision tree
+p2_f = predict(t2_f, df)  # Predicting probabilities
+head(p2_f)
+
+# Subsetting data for customers who defaulted
+df_amt_2 = subset(df, TARGET_BAD_FLAG == 1)
+head(df_amt_2)
+df_amt_2$TARGET_BAD_FLAG = NULL  # Removing the flag column as it's no longer needed
+head(df_amt_2)
+
+# Building a Poisson regression decision tree model to predict loss amount (TARGET_LOSS_AMT)
+t2_a = rpart(data = df_amt_2, TARGET_LOSS_AMT ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp, control = tr_set, method = "poisson")
+rpart.plot(t2_a)  # Visualizing the decision tree
+p2_a = predict(t2_a, df)  # Predicting loss amount
+
+# Combining probability and severity models
+p2 = p2_f * p2_a
+head(p2)
+
+# Calculating RMSE for model evaluation
+RMSE2 = sqrt(mean((df$TARGET_LOSS_AMT - p2)^2))
+print(RMSE2)
+
+# Splitting data into training and testing sets
+FLAG = sample(c(T,F), nrow(df_amt_2), replace = T, prob = c(0.7,0.3))
+df_train = df_amt_2[FLAG, ]
+df_test = df_amt_2[!FLAG, ]
+
+# Training decision tree models on training dataset
 tr_set = rpart.control(maxdepth = 10)
-tr_model = rpart(data = df_train, TARGET_BAD_FLAG~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.Job.Mgr+FLAG.Job.Office+FLAG.Job.Other+FLAG.Job.ProfExe+FLAG.Job.Sales+FLAG.Job.Self+FLAG.Reason.DebtCon+FLAG.Reason.HomeImp, 
-                 control = tr_set, method = "class", parms = list(split='information'))
-rpart.plot(tr_model)
-tr_model$variable.importance
 
-pt = predict(tr_model, df_test, type="prob")
-head(pt)
-pt2 = prediction(pt[,2], df_test$TARGET_BAD_FLAG)
-pt3 = performance(pt2, "tpr","fpr")
+# ANOVA decision tree model for loss amount
+t1a = rpart(data = df_train, TARGET_LOSS_AMT ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp, control = tr_set)
 
+# Poisson decision tree model for loss amount
+t1p = rpart(data = df_train, TARGET_LOSS_AMT ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp, control = tr_set, method = "poisson")
 
-#LOGISTIC REGRESSION MODEL
-theUpper_LR = glm(TARGET_BAD_FLAG~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.Job.Mgr+FLAG.Job.Office+FLAG.Job.Other+FLAG.Job.ProfExe+FLAG.Job.Sales+FLAG.Job.Self+FLAG.Reason.DebtCon+FLAG.Reason.HomeImp,
-                  family = "binomial", data = df_train)
-theLower_LR = glm(TARGET_BAD_FLAG~ 1, family = "binomial", data = df_train)
+# Visualizing decision trees
+rpart.plot(t1a)
+t1a$variable.importance  # Checking feature importance
+rpart.plot(t1p)
+t1p$variable.importance  # Checking feature importance
 
-summary(theUpper_LR)
-summary(theLower_LR)
+# Evaluating models on training set
+p1a = predict(t1a, df_train)
+RMSE1a = sqrt(mean((df_train$TARGET_LOSS_AMT - p1a)^2))
+RMSE1a
 
-#LOGISTIC REGRESSION MODEL USING BACKWARD VARIABLES SELECTION
-lrB_model = stepAIC(theUpper_LR, direction = "backward", scope = list(lower = theLower_LR, upper= theUpper_LR))
-summary(lrB_model)
+p1p = predict(t1p, df_train)
+RMSE1p = sqrt(mean((df_train$TARGET_LOSS_AMT - p1p)^2))
+RMSE1p
 
+print(paste("TRAIN RMSE ANOVA =", RMSE1a))
+print(paste("TRAIN RMSE Poisson =", RMSE1p))
 
-plrb = predict(lrB_model, df_test, type = "response")
-plrb2 = prediction(plrb, df_test$TARGET_BAD_FLAG)
-plrb3 = performance(plrb2, "tpr","fpr")
-
-
-plot(pt3, col = "green")
-plot(plrb3, col = "pink", add=T)
-abline(0,1, lty=2)
-legend("bottomright", c("DECISION TREE","LOGISTIC REGRESSION BWD"), col = c("green","pink"), bty = "y", lty=1)
-
-aucT = performance(pt2, "auc")@y.values
-aucLRB = performance(plrb2, "auc")@y.values
-print(paste("TREE AUC =", aucT))
-print(paste("LOGISTIC REGRESSION BWD AUC =", aucLRB))
-
-
-#STEP 5: Tree and Regression Analysis on PCA/tSNE Data
-
-head(df)
-df1 = df
-
-#Principal Component Values from Step 2:
-df1$PC1 = df_new[,"PC1"]
-df1$PC2 = df_new[,"PC2"]
-df1$PC3 = df_new[,"PC3"]
-
-#Principal Component Values from Step 3:
-df1$TS1M = df_tsne[,"TS1M_RF"]
-df1$TS2M = df_tsne[,"TS2M_RF"]
-
-#Removing cont variables 
-df1$TARGET_LOSS_AMT = NULL
-df1$LOAN = NULL
-df1$IMP_MORTDUE = NULL
-df1$IMP_VALUE = NULL
-df1$IMP_YOJ = NULL
-df1$IMP_DELINQ = NULL
-df1$IMP_CLAGE = NULL
-df1$IMP_CLNO = NULL
-df1$IMP_DEBTINC = NULL
-df1$M_MORTDUE = NULL
-df1$M_VALUE = NULL
-df1$M_YOJ = NULL
-df1$M_DEROG = NULL
-df1$M_DELINQ = NULL
-df1$M_CLAGE = NULL
-df1$M_CLAGE = NULL
-df1$M_NINQ = NULL
-df1$M_CLNO = NULL
-df1$M_DEBTINC = NULL
-df1$IMP_DEROG = NULL
-df1$IMP_NINQ =NULL
-
-summary(df1)
-head(df1)
-
-#DECISION TREE
-
-FLAG = sample(c(TRUE ,FALSE), nrow(df1), replace = TRUE, prob = c(0.7,0.3))
-df_train = df1[FLAG, ]
-df_test = df1[! FLAG, ]
-
-dim(df1)
-dim(df_train)
-dim(df_test)
-
+# Evaluating models on test set
 tr_set = rpart.control(maxdepth = 10)
-tr_model = rpart(data = df_train, TARGET_BAD_FLAG~ ., 
-                 control = tr_set, method = "class", parms = list(split='information'))
-rpart.plot(tr_model)
-tr_model$variable.importance
 
-pt = predict(tr_model, df_test, type="prob")
-head(pt)
-pt2 = prediction(pt[,2], df_test$TARGET_BAD_FLAG)
-pt3 = performance(pt2, "tpr","fpr")
+# ANOVA decision tree model
+t1a = rpart(data = df_test, TARGET_LOSS_AMT ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp, control = tr_set)
 
+# Poisson decision tree model
+t1p = rpart(data = df_test, TARGET_LOSS_AMT ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp, control = tr_set, method = "poisson")
 
-#LOGISTIC REGRESSION MODEL
-theUpper_LR = glm(TARGET_BAD_FLAG~ .,
-                  family = "binomial", data = df_train)
-theLower_LR = glm(TARGET_BAD_FLAG~ 1, family = "binomial", data = df_train)
+# Visualizing decision trees
+rpart.plot(t1a)
+t1a$variable.importance
+rpart.plot(t1p)
+t1p$variable.importance
 
-summary(theUpper_LR)
-summary(theLower_LR)
+# Calculating RMSE for test set
+p1a = predict(t1a, df_test)
+RMSE1a = sqrt(mean((df_test$TARGET_LOSS_AMT - p1a)^2))
+RMSE1a
 
-#LOGISTIC REGRESSION MODEL USING BACKWARD VARIABLES SELECTION
-lrB_model = stepAIC(theUpper_LR, direction = "backward", scope = list(lower = theLower_LR, upper= theUpper_LR))
-summary(lrB_model)
+p1p = predict(t1p, df_test)
+RMSE1p = sqrt(mean((df_test$TARGET_LOSS_AMT - p1p)^2))
+RMSE1p
 
+print(paste("TEST RMSE ANOVA =", RMSE1a))
+print(paste("TEST RMSE Poisson =", RMSE1p))
 
-plrb = predict(lrB_model, df_test, type = "response")
-plrb2 = prediction(plrb, df_test$TARGET_BAD_FLAG)
-plrb3 = performance(plrb2, "tpr","fpr")
+# Training on full dataset
+t1a = rpart(data = df_amt_2, TARGET_LOSS_AMT ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp, control = tr_set)
 
+t1p = rpart(data = df_amt_2, TARGET_LOSS_AMT ~ LOAN+IMP_MORTDUE+IMP_VALUE+IMP_YOJ+IMP_DEROG+IMP_DELINQ+IMP_CLAGE+IMP_NINQ+IMP_CLNO+IMP_DEBTINC+FLAG.JOB.Mgr+FLAG.JOB.Office+FLAG.JOB.Other+FLAG.JOB.ProfExe+FLAG.JOB.Sales+FLAG.JOB.Self+FLAG.REASON.DebtCon+FLAG.REASON.HomeImp, control = tr_set, method = "poisson")
 
-plot(pt3, col = "green")
-plot(plrb3, col = "pink", add=T)
-abline(0,1, lty=2)
-legend("bottomright", c("DECISION TREE","LOGISTIC REGRESSION BWD"), col = c("green","pink"), bty = "y", lty=1)
+# Final RMSE calculation
+p1a = predict(t1a, df_amt_2)
+RMSE1a = sqrt(mean((df_amt_2$TARGET_LOSS_AMT - p1a)^2))
+RMSE1a
 
-aucT = performance(pt2, "auc")@y.values
-aucLRB = performance(plrb2, "auc")@y.values
-print(paste("TREE AUC =", aucT))
-print(paste("LOGISTIC REGRESSION BWD AUC =", aucLRB))
+p1p = predict(t1p, df_amt_2)
+RMSE1p = sqrt(mean((df_amt_2$TARGET_LOSS_AMT - p1p)^2))
+RMSE1p
 
+print(paste("ALL DATA RMSE ANOVA =", RMSE1a))
+print(paste("ALL DATA RMSE Poisson =", RMSE1p))
