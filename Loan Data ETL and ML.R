@@ -9,7 +9,7 @@ library(ROCR)         # For performance evaluation (ROC curves, AUC)
 PATH = "Downloaded the HMEQ_Scrubbed_1.CSV file"
 FILE_NAME = "HMEQ_Scrubbed_1.csv"  # Data file
 
-# Create full path to the file
+# Create a full path to the file
 INFILE = paste(PATH, FILE_NAME, sep="/")
 
 # Set working directory to the file location
